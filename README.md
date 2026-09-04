@@ -75,6 +75,20 @@ account and bake your own image.
    aws s3 cp refplat-*-iso.zip s3://my-cml-isos-<acct>/refplat-iso.zip
    ```
 
+4. Bake the AMI with the companion tool — one command, ~60 minutes, unattended:
+
+   ```bash
+   git clone https://github.com/felipedbene/cml-free-ami-baker
+   cd cml-free-ami-baker
+   export CML_BAKE_PASSWORD='YourStrong.Pass1'
+   ./bake.sh --bucket my-cml-isos-<acct> --region us-east-1
+   ```
+
+   👉 **[felipedbene/cml-free-ami-baker](https://github.com/felipedbene/cml-free-ami-baker)** —
+   installs CML under KVM on a throwaway host, lets CML configure itself with no keystrokes,
+   applies the EC2 fixes, and registers the AMI. It also documents the manual/interactive path
+   and a troubleshooting guide.
+
 **CML-Free limits:** up to **5 nodes** running simultaneously (unmanaged switches and
 external connectors don't count), single user, and telemetry cannot be disabled. The bundled
 VM images are licensed for use *inside* CML only.
@@ -84,8 +98,8 @@ VM images are licensed for use *inside* CML only.
 ## Quickstart
 
 ```bash
-# 0. Bake the AMI once (~60-75 min, mostly unattended) — see docs/BAKING.md
-#    Produces an AMI id you plug in below.
+# 0. Bake the AMI once (~60 min, unattended) with the companion tool:
+#    https://github.com/felipedbene/cml-free-ami-baker
 
 # 1. Configure
 npm install
@@ -176,23 +190,26 @@ Prices change and vary by region — treat these as orientation, not a quote, an
 
 ## Known EC2 gotchas (all handled, but worth understanding)
 
-The CML installer targets bare metal, so the image needs four adaptations. `02-finalize-image.sh`
-applies the first four; the fifth is per-instance.
+The CML installer targets bare metal, so the image needs three adaptations, applied at bake
+time by the [baker](https://github.com/felipedbene/cml-free-ami-baker); the fourth is
+per-instance and the fifth is a lab-design constraint.
 
-1. **EFI fallback path.** EC2 boots `\EFI\BOOT\BOOTX64.EFI`; the CML installer only writes
-   `\EFI\ubuntu\`. Without the copy the instance drops to an initramfs prompt.
-2. **NIC naming.** CML's config hardcodes `enp1s0` (its KVM name). A systemd `.link` rule
+1. **NIC naming.** CML's config hardcodes `enp1s0` (its KVM name). A systemd `.link` rule
    renames the ENA interface to `enp1s0` so the baked config keeps working.
-3. **Bridge MAC pinning.** CML builds `bridge0` over the primary NIC and pins that NIC's MAC
+2. **Bridge MAC pinning.** CML builds `bridge0` over the primary NIC and pins that NIC's MAC
    into NetworkManager. EC2 drops frames sourced from a MAC that isn't the ENI's, so a
-   fresh instance gets no DHCP reply at all. `npm run fix-network` points `bridge0` at the
-   instance's real MAC over the serial console. **This is one-time per instance** — it
-   survives stop/start, because the ENI keeps its MAC.
-4. **Bridge MTU.** AWS DHCP hands `bridge0` an MTU of 9001 while the bridge *port* stays at
+   fresh instance gets no DHCP reply at all.
+3. **Bridge MTU.** AWS DHCP hands `bridge0` an MTU of 9001 while the bridge *port* stays at
    1500. The failure is nasty: TCP handshakes succeed and payload packets vanish, so the
    port looks open while nothing loads. The port MTU is set to 9001 to match.
+4. **The MAC fix again, per instance.** CML re-pins the MAC whenever its setup runs, so a
+   *newly created* instance needs `npm run fix-network` once. It survives stop/start, because
+   the ENI keeps its MAC.
 5. **Lab connectivity.** Because of the same MAC filtering, **bridged** external connectors
    can't work on EC2 — use **NAT** connectors in your labs.
+
+The AMI is UEFI-only, so it must be registered with `--boot-mode uefi`. (Cisco's installer does
+write the `\EFI\BOOT\BOOTX64.EFI` fallback loader EC2 looks for, so that part needs no fixing.)
 
 Debugging aid: the EC2 **serial console** is enabled in the image (login `sysadmin`), which
 is how you recover an instance with no working network.
@@ -219,8 +236,6 @@ bin/cml-lab.ts              CDK app entry
 lib/cml-lab-stack.ts        VPC/SG/launch template/instance/EIP
 scripts/lab.sh              start | stop | status | url | fix-network
 scripts/fix-bridge-mac.py   serial-console bridge MAC + MTU fix
-scripts/bake/               AMI bake stages (run on the bake host)
-docs/BAKING.md              how the AMI is built, step by step
 ```
 
 ## License and trademarks

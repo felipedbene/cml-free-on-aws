@@ -1,0 +1,28 @@
+{
+  "name": "cml-free-on-aws",
+  "version": "1.0.0",
+  "description": "Run Cisco Modeling Labs (CML Free) on EC2 with nested virtualization",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "synth": "cdk synth",
+    "deploy": "cdk deploy",
+    "destroy": "cdk destroy",
+    "start": "./scripts/lab.sh start",
+    "stop": "./scripts/lab.sh stop",
+    "status": "./scripts/lab.sh status",
+    "url": "./scripts/lab.sh url",
+    "fix-network": "./scripts/lab.sh fix-network"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.220.0",
+    "constructs": "^10.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "aws-cdk": "^2.1100.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.0"
+  }
+}

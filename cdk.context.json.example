@@ -1,0 +1,18 @@
+{
+  "_comment": "Copy to cdk.context.json and fill in. Only cmlAmiId and allowedCidr(s) are required.",
+
+  "cmlAmiId": "ami-0000000000000000",
+  "allowedCidrs": ["203.0.113.10/32"],
+
+  "_optional": "---- everything below is optional ----",
+  "keyName": "my-ec2-keypair",
+  "instanceType": "m8i.xlarge",
+  "volumeSizeGiB": 64,
+  "useSpot": true,
+  "region": "us-east-1",
+
+  "_byo_network": "Omit these three to let the stack create its own VPC.",
+  "vpcId": "vpc-0000000000000000",
+  "subnetId": "subnet-0000000000000000",
+  "subnetAz": "us-east-1a"
+}

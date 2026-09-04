@@ -1,0 +1,10 @@
+{
+  "app": "npx ts-node bin/cml-lab.ts",
+  "context": {
+    "instanceType": "m8i.xlarge",
+    "volumeSizeGiB": 64,
+    "useSpot": true,
+    "@aws-cdk/aws-ec2:restrictDefaultSecurityGroup": true,
+    "@aws-cdk/core:stackRelativeExports": true
+  }
+}

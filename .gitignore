@@ -1,0 +1,14 @@
+node_modules/
+dist/
+cdk.out/
+*.js
+*.d.ts
+!scripts/**
+
+# Local settings: account/VPC/AMI IDs, operator CIDRs, bootstrap qualifier
+cdk.context.json
+
+# Never commit keys
+*.pem
+*.key
+serialkey*

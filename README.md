@@ -124,7 +124,7 @@ npm run url                       # https://<elastic-ip>
 | `cmlAmiId` | ✅ | — | AMI you baked |
 | `allowedCidrs` | ✅ | — | Array of CIDRs allowed on 443 and 22. Use `["1.2.3.4/32"]`, never `0.0.0.0/0` |
 | `keyName` | | none | Existing EC2 key pair. Optional — the serial console works without it |
-| `instanceType` | | `m8i.xlarge` | Any nested-virt type; `m8i.large` is cheaper but tight for 5 nodes |
+| `instanceType` | | `m8i.xlarge` | Any nested-virt type with **≥4 vCPU** — see [right-sizing](#right-sizing-for-the-5-node-cap) |
 | `volumeSizeGiB` | | `64` | Root volume; must be ≥ the AMI's snapshot |
 | `useSpot` | | `true` | Persistent spot request that **stops** (not terminates) on interruption |
 | `region` | | `us-east-1` | Also honors `AWS_REGION` |
@@ -155,10 +155,39 @@ Per-hour compute:
 
 | Instance | On-demand | Spot (observed) |
 |---|---|---|
-| `m8i.large` (2 vCPU, 8 GiB) | $0.106/h | ~$0.05/h |
-| **`m8i.xlarge` (4 vCPU, 16 GiB)** — default | **$0.212/h** | **~$0.098/h** ($0.084–0.112) |
+| `c7i.xlarge` (4 vCPU, 8 GiB) — cheapest supported | $0.179/h | ~$0.070/h |
+| **`m8i.xlarge` (4 vCPU, 16 GiB)** — default, validated | **$0.212/h** | **~$0.098/h** ($0.084–0.112) |
 | `m8i.2xlarge` (8 vCPU, 32 GiB) | $0.423/h | ~$0.205/h |
 | `i3en.metal` — the old bare-metal way | $10.848/h | — |
+
+### Right-sizing for the 5-node cap
+
+CML-Free runs at most 5 nodes, so there's no point paying for a big instance — but there is a
+hard floor: **CML's setup refuses to start with fewer than 4 vCPUs** (*"This system does not have
+the minimum number of CPUs required (4)"*), so every `.large` (2 vCPU) type is out, however cheap.
+
+Memory is the dimension worth tuning. Observed on a running 5-node IOL lab (MPLS L3VPN: 2 CE,
+2 PE, 1 P): **~13% of 16 GiB, about 2 GiB, at 1.25% CPU.** IOL nodes are remarkably light.
+
+| Your labs | RAM | Cheapest 4-vCPU options (us-east-1) |
+|---|---|---|
+| IOL / IOL-L2 only | 8 GiB is plenty | `c7i.xlarge` $0.179 OD / ~$0.070 spot · `c7i-flex.xlarge` $0.170 OD |
+| ASAv, Ubuntu or desktop nodes (2–4 GiB each) | 16 GiB | `m7i-flex.xlarge` $0.192 OD / ~$0.078 spot · `m7i.xlarge` $0.202 OD · `m8i.xlarge` $0.212 OD |
+
+Sticking to IOL labs on `c7i.xlarge` spot costs roughly **29% less** than the default. Two caveats:
+
+- **`-flex` types** are built for an average CPU utilization around 40% with bursting. An idle lab
+  fits that profile nicely, but sustained full load can be throttled.
+- **Spot prices don't track on-demand.** `m8i-flex.xlarge` was *more* expensive on spot than
+  `m8i.xlarge` while these numbers were collected. Check your own AZ:
+  ```bash
+  aws ec2 describe-spot-price-history --instance-types c7i.xlarge m7i-flex.xlarge \
+    --product-descriptions Linux/UNIX --start-time "$(date -u -v-2H +%Y-%m-%dT%H:%M:%SZ)" \
+    --query 'SpotPriceHistory[].[InstanceType,AvailabilityZone,SpotPrice]' --output table
+  ```
+
+Only `m8i.xlarge` has been validated end to end here; the rest are priced from the API and meet
+the documented requirements.
 
 Fixed monthly costs that apply **even while stopped**:
 

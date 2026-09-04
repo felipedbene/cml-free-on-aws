@@ -173,6 +173,14 @@ Memory is the dimension worth tuning. Observed on a running 5-node IOL lab (MPLS
 |---|---|---|
 | IOL / IOL-L2 only | 8 GiB is plenty | `c7i.xlarge` $0.179 OD / ~$0.070 spot · `c7i-flex.xlarge` $0.170 OD |
 | ASAv, Ubuntu or desktop nodes (2–4 GiB each) | 16 GiB | `m7i-flex.xlarge` $0.192 OD / ~$0.078 spot · `m7i.xlarge` $0.202 OD · `m8i.xlarge` $0.212 OD |
+| Five heavy nodes, or a paid CML tier with 20–40 nodes | 32 GiB | `r8i-flex.xlarge` $0.264 OD / ~$0.125 spot · `r7i.xlarge` $0.265 OD · `r8i.xlarge` $0.278 OD |
+
+The `r` family (`r7i`, `r7iz`, `r8i`, `r8i-flex`, `r8id`) does support nested virtualization and
+gives 32 GiB at 4 vCPU — the best memory *per dollar* of the lot (`r8i-flex` at ~$0.0039 per
+GiB-hour on spot, versus ~$0.0087 for `c7i`). It is still the wrong choice for CML-Free: with the
+5-node cap keeping actual usage near 2 GiB, you'd pay ~80% more per hour for RAM you cannot use.
+It becomes the right answer only if you move to a paid tier (20–40 nodes) *and* run memory-hungry
+node types — 20 IOL nodes extrapolate to roughly 9 GiB, which 16 GiB already covers.
 
 Sticking to IOL labs on `c7i.xlarge` spot costs roughly **29% less** than the default. Two caveats:
 
@@ -216,6 +224,37 @@ Prices change and vary by region — treat these as orientation, not a quote, an
 [AWS pricing pages](https://aws.amazon.com/ec2/pricing/) for your region.
 
 ---
+
+## Is this enough for certification study?
+
+Worth being straight about, since that's why most people want a cheap CML.
+
+**Written exams (e.g. ENCOR 350-401): yes, comfortably.** What CML-Free covers well:
+
+- **All the pure routing and switching** — OSPF, EIGRP, BGP, MPLS, DMVPN, VRFs, QoS, multicast.
+  IOL-XE handles these properly, and they're the bulk of the technologies list.
+- **Automation** — Python, RESTCONF, NETCONF and YANG against a real IOS-XE box all work on IOL-XE.
+
+**Lab exams: partially — and the 5-node cap isn't the only gap.**
+
+- **Scale.** Lab-style scenarios run 15–25 devices, and much of the difficulty is troubleshooting
+  interactions across a large topology under time pressure. You can't rehearse that at 5 nodes.
+  That's what [CML-Personal](https://developer.cisco.com/modeling-labs/) ($199, 20 nodes) or
+  Personal Plus ($349, 40 nodes) is for.
+- **SD-WAN and Catalyst Center.** On the blueprint, impossible on CML-Free, and even on a paid tier
+  you'd need vManage/vBond/vSmart images that require an entitled Cisco account. Most candidates
+  use Cisco dCloud sandboxes or DevNet reservations for these instead.
+- **Cat8000v/9000v versus IOL.** The exams use Cat8000v/9000v-flavoured IOS-XE. Some SD-Access,
+  EVPN and platform-specific behaviour differs or is missing in IOL — fine for learning concepts,
+  not for final-weeks muscle memory.
+
+**Practical path:** CML-Free on this stack gets you through the written material and most lab
+*technologies* at 1–5 nodes. Upgrade when you're doing full mock scenarios, not before — and note
+that a paid tier needs no bigger instance: 20 IOL nodes extrapolate to roughly 9 GiB, so a 4 vCPU
+/ 16 GiB instance still carries it.
+
+Blueprints and CML's image lineup both change, so verify the current exam topology list on Cisco's
+site before committing to a study plan.
 
 ## Known EC2 gotchas (all handled, but worth understanding)
 
